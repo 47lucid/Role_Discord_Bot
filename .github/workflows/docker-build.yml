@@ -43,7 +43,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to Docker Hub (Optional)
-        if: github.event_name != 'pull_request' && secrets.DOCKERHUB_USERNAME != ''
+        if: github.event_name != 'pull_request' && secrets.DOCKERHUB_USERNAME
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -53,9 +53,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/discord-role-restore
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
@@ -75,4 +73,4 @@ jobs:
 
       - name: Print image digest
         if: github.event_name != 'pull_request'
-        run: echo "Image pushed: ${{ steps.meta.outputs.tags }}"
+        run: echo "Image pushed:"${{ steps.meta.outputs.tags }}
