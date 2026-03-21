@@ -34,7 +34,7 @@ jobs:
 
       - name: Convert repository name to lowercase
         id: repo
-        run: echo "lowercase=${GITHUB_REPOSITORY@L}" >> $GITHUB_OUTPUT
+        run: echo "lowercase=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
         shell: bash
 
       - name: Set up Docker Buildx
@@ -72,4 +72,4 @@ jobs:
 
       - name: Print image digest
         if: github.event_name != 'pull_request'
-        run: echo "Image pushed:"${{ steps.meta.outputs.tags }}
+        run: echo "Image pushed: ${{ steps.meta.outputs.tags }}"
