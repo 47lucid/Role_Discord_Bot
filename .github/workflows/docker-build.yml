@@ -55,7 +55,7 @@ jobs:
         with:
           images: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-            ${{ secrets.DOCKERHUB_USERNAME && format('docker.io/{0}/discord-role-restore', secrets.DOCKERHUB_USERNAME) || '' }}
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/discord-role-restore
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
