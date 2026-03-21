@@ -10,7 +10,9 @@ impl Database {
     /// Initialize the database, creating tables if they don't exist.
     pub fn init<P: AsRef<Path>>(db_path: P) -> SqliteResult<Self> {
         let conn = Connection::open(db_path)?;
-        let db = Database { conn: Mutex::new(conn) };
+        let db = Database {
+            conn: Mutex::new(conn),
+        };
         db.create_tables()?;
         Ok(db)
     }
@@ -64,8 +66,7 @@ impl Database {
         user_id: u64,
         role_ids: &[u64],
     ) -> SqliteResult<()> {
-        let role_json = serde_json::to_string(role_ids)
-            .unwrap_or_else(|_| "[]".to_string());
+        let role_json = serde_json::to_string(role_ids).unwrap_or_else(|_| "[]".to_string());
 
         let conn = self.conn.lock().unwrap();
         conn.execute(
@@ -80,16 +81,17 @@ impl Database {
     /// Retrieve saved roles for a user
     pub fn get_user_roles(&self, guild_id: u64, user_id: u64) -> SqliteResult<Option<Vec<u64>>> {
         let conn = self.conn.lock().unwrap();
-        let result = conn.query_row(
-            "SELECT role_ids FROM user_roles WHERE guild_id = ? AND user_id = ?",
-            params![guild_id as i64, user_id as i64],
-            |row| {
-                let role_json: String = row.get(0)?;
-                let roles: Vec<u64> = serde_json::from_str(&role_json)
-                    .unwrap_or_default();
-                Ok(roles)
-            },
-        ).optional()?;
+        let result = conn
+            .query_row(
+                "SELECT role_ids FROM user_roles WHERE guild_id = ? AND user_id = ?",
+                params![guild_id as i64, user_id as i64],
+                |row| {
+                    let role_json: String = row.get(0)?;
+                    let roles: Vec<u64> = serde_json::from_str(&role_json).unwrap_or_default();
+                    Ok(roles)
+                },
+            )
+            .optional()?;
 
         Ok(result)
     }
@@ -106,8 +108,7 @@ impl Database {
 
     /// Set safe roles for a guild
     pub fn set_safe_roles(&self, guild_id: u64, role_ids: &[u64]) -> SqliteResult<()> {
-        let role_json = serde_json::to_string(role_ids)
-            .unwrap_or_else(|_| "[]".to_string());
+        let role_json = serde_json::to_string(role_ids).unwrap_or_else(|_| "[]".to_string());
 
         let conn = self.conn.lock().unwrap();
         conn.execute(
@@ -121,8 +122,7 @@ impl Database {
 
     /// Set avoid roles for a guild
     pub fn set_avoid_roles(&self, guild_id: u64, role_ids: &[u64]) -> SqliteResult<()> {
-        let role_json = serde_json::to_string(role_ids)
-            .unwrap_or_else(|_| "[]".to_string());
+        let role_json = serde_json::to_string(role_ids).unwrap_or_else(|_| "[]".to_string());
 
         let conn = self.conn.lock().unwrap();
         conn.execute(
@@ -137,16 +137,17 @@ impl Database {
     /// Get safe roles for a guild
     pub fn get_safe_roles(&self, guild_id: u64) -> SqliteResult<Vec<u64>> {
         let conn = self.conn.lock().unwrap();
-        let result = conn.query_row(
-            "SELECT safe_roles FROM guild_config WHERE guild_id = ?",
-            params![guild_id as i64],
-            |row| {
-                let role_json: String = row.get(0)?;
-                let roles: Vec<u64> = serde_json::from_str(&role_json)
-                    .unwrap_or_default();
-                Ok(roles)
-            },
-        ).optional()?;
+        let result = conn
+            .query_row(
+                "SELECT safe_roles FROM guild_config WHERE guild_id = ?",
+                params![guild_id as i64],
+                |row| {
+                    let role_json: String = row.get(0)?;
+                    let roles: Vec<u64> = serde_json::from_str(&role_json).unwrap_or_default();
+                    Ok(roles)
+                },
+            )
+            .optional()?;
 
         Ok(result.unwrap_or_default())
     }
@@ -154,16 +155,17 @@ impl Database {
     /// Get avoid roles for a guild
     pub fn get_avoid_roles(&self, guild_id: u64) -> SqliteResult<Vec<u64>> {
         let conn = self.conn.lock().unwrap();
-        let result = conn.query_row(
-            "SELECT avoid_roles FROM guild_config WHERE guild_id = ?",
-            params![guild_id as i64],
-            |row| {
-                let role_json: String = row.get(0)?;
-                let roles: Vec<u64> = serde_json::from_str(&role_json)
-                    .unwrap_or_default();
-                Ok(roles)
-            },
-        ).optional()?;
+        let result = conn
+            .query_row(
+                "SELECT avoid_roles FROM guild_config WHERE guild_id = ?",
+                params![guild_id as i64],
+                |row| {
+                    let role_json: String = row.get(0)?;
+                    let roles: Vec<u64> = serde_json::from_str(&role_json).unwrap_or_default();
+                    Ok(roles)
+                },
+            )
+            .optional()?;
 
         Ok(result.unwrap_or_default())
     }
@@ -198,7 +200,7 @@ impl Database {
         saved_roles: &[u64],
         bot_highest_role_position: i64,
         roles_map: &std::collections::HashMap<u64, (String, i64, bool)>, // (role_id -> (name, position, has_admin))
-        filter_admin: bool,  // Whether to filter out admin role
+        filter_admin: bool, // Whether to filter out admin role
     ) -> SqliteResult<Vec<u64>> {
         let safe_roles = self.get_safe_roles(guild_id)?;
         let avoid_roles = self.get_avoid_roles(guild_id)?;
@@ -209,7 +211,7 @@ impl Database {
                 // Check safe/avoid rules
                 let is_safe = safe_roles.is_empty() || safe_roles.contains(role_id);
                 let is_not_avoided = !avoid_roles.contains(role_id);
-                
+
                 if !(is_safe && is_not_avoided) {
                     return false;
                 }
@@ -258,14 +260,16 @@ impl Database {
     /// Get logging channel for a guild
     pub fn get_log_channel(&self, guild_id: u64) -> SqliteResult<Option<u64>> {
         let conn = self.conn.lock().unwrap();
-        let result = conn.query_row(
-            "SELECT log_channel_id FROM guild_config WHERE guild_id = ?",
-            params![guild_id as i64],
-            |row| {
-                let channel_id: Option<i64> = row.get(0)?;
-                Ok(channel_id.map(|c| c as u64))
-            },
-        ).optional()?;
+        let result = conn
+            .query_row(
+                "SELECT log_channel_id FROM guild_config WHERE guild_id = ?",
+                params![guild_id as i64],
+                |row| {
+                    let channel_id: Option<i64> = row.get(0)?;
+                    Ok(channel_id.map(|c| c as u64))
+                },
+            )
+            .optional()?;
 
         Ok(result.flatten())
     }
@@ -288,14 +292,16 @@ impl Database {
     /// Check if admin role filtering is enabled for a guild (defaults to true)
     pub fn get_filter_admin_roles(&self, guild_id: u64) -> SqliteResult<bool> {
         let conn = self.conn.lock().unwrap();
-        let result = conn.query_row(
-            "SELECT COALESCE(filter_admin_roles, 1) FROM guild_config WHERE guild_id = ?",
-            params![guild_id as i64],
-            |row| {
-                let enabled: i64 = row.get(0)?;
-                Ok(enabled != 0)
-            },
-        ).optional()?;
+        let result = conn
+            .query_row(
+                "SELECT COALESCE(filter_admin_roles, 1) FROM guild_config WHERE guild_id = ?",
+                params![guild_id as i64],
+                |row| {
+                    let enabled: i64 = row.get(0)?;
+                    Ok(enabled != 0)
+                },
+            )
+            .optional()?;
 
         Ok(result.unwrap_or(true))
     }

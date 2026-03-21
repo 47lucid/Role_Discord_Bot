@@ -1,15 +1,18 @@
 // src/main.rs
-mod db;
 mod commands;
+mod db;
 
 use async_trait::async_trait;
+use db::Database;
 use serenity::{
-    all::{Context, EventHandler, GatewayIntents, GuildId, Member, Ready, RoleId, User, Interaction, ChannelId, CreateEmbed, CreateMessage, CreateEmbedAuthor},
+    all::{
+        ChannelId, Context, CreateEmbed, CreateEmbedAuthor, CreateMessage, EventHandler,
+        GatewayIntents, GuildId, Interaction, Member, Ready, RoleId, User,
+    },
     Client,
 };
 use std::env;
 use std::sync::Arc;
-use db::Database;
 
 struct Handler {
     db: Arc<Database>,
@@ -25,7 +28,9 @@ impl EventHandler for Handler {
         match interaction {
             Interaction::Command(command) => {
                 if command.data.name == "setup" {
-                    if let Err(e) = commands::handle_setup_command(&ctx, &command, self.db.clone()).await {
+                    if let Err(e) =
+                        commands::handle_setup_command(&ctx, &command, self.db.clone()).await
+                    {
                         eprintln!("Error handling setup command: {}", e);
                     }
                 }
@@ -43,7 +48,7 @@ impl EventHandler for Handler {
                 } else {
                     Ok(())
                 };
-                
+
                 if let Err(e) = result {
                     eprintln!("Error handling component interaction: {}", e);
                 }
@@ -62,31 +67,59 @@ impl EventHandler for Handler {
     ) {
         let guild_id_num = guild_id.get();
         let user_tag = user.tag();
-        
+
         let role_ids: Vec<u64> = if let Some(member) = member_data_if_available {
             // If we have member data, use it directly
             let roles: Vec<u64> = member.roles.iter().map(|r| r.get()).collect();
-            eprintln!("[{}] Member data provided with {} roles for {} on removal", guild_id_num, roles.len(), user_tag);
+            eprintln!(
+                "[{}] Member data provided with {} roles for {} on removal",
+                guild_id_num,
+                roles.len(),
+                user_tag
+            );
             roles
         } else {
             // Fallback: try to get from cache
             // Note: We cannot fetch from API when member has left the guild (will return "Unknown Member")
-            let cached_result = ctx.cache.guild(guild_id)
-                .and_then(|guild| guild.members.get(&user.id).map(|m| m.roles.iter().map(|r| r.get()).collect::<Vec<u64>>()));
-            
+            let cached_result = ctx.cache.guild(guild_id).and_then(|guild| {
+                guild
+                    .members
+                    .get(&user.id)
+                    .map(|m| m.roles.iter().map(|r| r.get()).collect::<Vec<u64>>())
+            });
+
             if let Some(roles) = cached_result.clone() {
-                eprintln!("[{}] Got {} roles from cache for {} on removal", guild_id_num, roles.len(), user_tag);
+                eprintln!(
+                    "[{}] Got {} roles from cache for {} on removal",
+                    guild_id_num,
+                    roles.len(),
+                    user_tag
+                );
                 roles
             } else {
-                eprintln!("[{}] No member data and not in cache for {} on removal", guild_id_num, user_tag);
+                eprintln!(
+                    "[{}] No member data and not in cache for {} on removal",
+                    guild_id_num, user_tag
+                );
                 vec![]
             }
         };
 
         if !role_ids.is_empty() {
-            eprintln!("[{}] Saving {} roles for {}", guild_id_num, role_ids.len(), user_tag);
-            if let Err(e) = self.db.save_user_roles(guild_id_num, user.id.get(), &role_ids) {
-                eprintln!("[{}] Failed to save roles for {}: {}", guild_id_num, user_tag, e);
+            eprintln!(
+                "[{}] Saving {} roles for {}",
+                guild_id_num,
+                role_ids.len(),
+                user_tag
+            );
+            if let Err(e) = self
+                .db
+                .save_user_roles(guild_id_num, user.id.get(), &role_ids)
+            {
+                eprintln!(
+                    "[{}] Failed to save roles for {}: {}",
+                    guild_id_num, user_tag, e
+                );
             }
         } else {
             eprintln!("[{}] No roles to save for {}", guild_id_num, user_tag);
@@ -100,40 +133,55 @@ impl EventHandler for Handler {
 
         match self.db.get_user_roles(guild_id, member.user.id.get()) {
             Ok(Some(saved_roles)) => {
-                eprintln!("[{}] Found {} saved roles for {}", guild_id, saved_roles.len(), user_tag);
-                
+                eprintln!(
+                    "[{}] Found {} saved roles for {}",
+                    guild_id,
+                    saved_roles.len(),
+                    user_tag
+                );
+
                 // Build role hierarchy and permission data (must be done before await)
                 let (bot_highest_role_position, roles_map) = {
                     if let Some(guild) = ctx.cache.guild(member.guild_id) {
-                        let mut roles_map: std::collections::HashMap<u64, (String, i64, bool)> = std::collections::HashMap::new();
+                        let mut roles_map: std::collections::HashMap<u64, (String, i64, bool)> =
+                            std::collections::HashMap::new();
                         let mut bot_highest_role_position: i64 = i64::MIN;
                         let bot_id = ctx.cache.current_user().id;
-                        
+
                         // Find bot's member to get their role hierarchy position
                         if let Some(bot_member) = guild.members.get(&bot_id) {
                             for role_id in &bot_member.roles {
                                 if let Some(role) = guild.roles.get(role_id) {
-                                    bot_highest_role_position = bot_highest_role_position.max(role.position as i64);
+                                    bot_highest_role_position =
+                                        bot_highest_role_position.max(role.position as i64);
                                 }
                             }
                             if bot_highest_role_position != i64::MIN {
-                                eprintln!("[{}] Bot highest role position: {}", guild_id, bot_highest_role_position);
+                                eprintln!(
+                                    "[{}] Bot highest role position: {}",
+                                    guild_id, bot_highest_role_position
+                                );
                             }
                         }
-                        
+
                         // Fallback if bot not found or has no roles - set to MAX so all normal roles can be assigned
                         if bot_highest_role_position == i64::MIN {
                             eprintln!("[{}] Bot not found in cache or has no roles, allowing all assignable roles", guild_id);
                             bot_highest_role_position = i64::MAX;
                         }
-                        
+
                         // Build role info map
                         for role in guild.roles.values() {
                             let role_id = role.id.get();
-                            let has_admin = role.permissions.contains(serenity::all::Permissions::ADMINISTRATOR);
-                            roles_map.insert(role_id, (role.name.clone(), role.position as i64, has_admin));
+                            let has_admin = role
+                                .permissions
+                                .contains(serenity::all::Permissions::ADMINISTRATOR);
+                            roles_map.insert(
+                                role_id,
+                                (role.name.clone(), role.position as i64, has_admin),
+                            );
                         }
-                        
+
                         (bot_highest_role_position, roles_map)
                     } else {
                         eprintln!("[{}] Guild not found in cache", guild_id);
@@ -143,60 +191,94 @@ impl EventHandler for Handler {
 
                 // Now use the extracted data for filtering
                 let filter_admin = self.db.get_filter_admin_roles(guild_id).unwrap_or(true);
-                eprintln!("[{}] Admin role filter enabled: {} (true=allow admin, false=block admin)", guild_id, filter_admin);
-                
+                eprintln!(
+                    "[{}] Admin role filter enabled: {} (true=allow admin, false=block admin)",
+                    guild_id, filter_admin
+                );
+
                 // Debug: log the roles that will be checked
                 for role_id in &saved_roles {
                     if let Some((name, position, has_admin)) = roles_map.get(role_id) {
-                        eprintln!("[{}]   Role to check: {} (id: {}, pos: {}, admin: {})", guild_id, name, role_id, position, has_admin);
+                        eprintln!(
+                            "[{}]   Role to check: {} (id: {}, pos: {}, admin: {})",
+                            guild_id, name, role_id, position, has_admin
+                        );
                     }
                 }
-                
-                match self.db.filter_roles_for_restoration_with_permissions(guild_id, &saved_roles, bot_highest_role_position, &roles_map, filter_admin) {
+
+                match self.db.filter_roles_for_restoration_with_permissions(
+                    guild_id,
+                    &saved_roles,
+                    bot_highest_role_position,
+                    &roles_map,
+                    filter_admin,
+                ) {
                     Ok(filtered_roles) => {
-                        eprintln!("[{}] Filtered roles: {} -> {} (removed {} roles)", guild_id, saved_roles.len(), filtered_roles.len(), saved_roles.len() - filtered_roles.len());
+                        eprintln!(
+                            "[{}] Filtered roles: {} -> {} (removed {} roles)",
+                            guild_id,
+                            saved_roles.len(),
+                            filtered_roles.len(),
+                            saved_roles.len() - filtered_roles.len()
+                        );
                         for role_id in &filtered_roles {
                             if let Some((name, _, _)) = roles_map.get(role_id) {
                                 eprintln!("[{}]   Will assign: {} ({})", guild_id, name, role_id);
                             }
                         }
-                        
+
                         if !filtered_roles.is_empty() {
-                            let roles_to_give: Vec<RoleId> = filtered_roles.iter().map(|&id| RoleId::new(id)).collect();
+                            let roles_to_give: Vec<RoleId> =
+                                filtered_roles.iter().map(|&id| RoleId::new(id)).collect();
 
                             if !roles_to_give.is_empty() {
                                 match member.add_roles(&ctx.http, &roles_to_give).await {
                                     Ok(_) => {
                                         // Log the restoration if a log channel is configured
-                                        if let Ok(Some(log_channel_id)) = self.db.get_log_channel(guild_id) {
-                                            let role_mentions: Vec<String> = roles_to_give.iter()
+                                        if let Ok(Some(log_channel_id)) =
+                                            self.db.get_log_channel(guild_id)
+                                        {
+                                            let role_mentions: Vec<String> = roles_to_give
+                                                .iter()
                                                 .map(|r| format!("<@&{}>", r.get()))
                                                 .collect();
                                             let roles_text = role_mentions.join(", ");
-                                            
+
                                             let author = CreateEmbedAuthor::new(&member.user.name)
-                                                .icon_url(member.user.avatar_url().unwrap_or_else(|| member.user.default_avatar_url()));
-                                            
+                                                .icon_url(member.user.avatar_url().unwrap_or_else(
+                                                    || member.user.default_avatar_url(),
+                                                ));
+
                                             let embed = CreateEmbed::new()
                                                 .author(author)
                                                 .title("Roles Restored")
                                                 .description(roles_text)
                                                 .colour(0x2ecc71);
-                                            
+
                                             if let Err(e) = ChannelId::new(log_channel_id)
-                                                .send_message(&ctx.http, CreateMessage::new().embed(embed))
+                                                .send_message(
+                                                    &ctx.http,
+                                                    CreateMessage::new().embed(embed),
+                                                )
                                                 .await
                                             {
                                                 eprintln!("Failed to send log message: {}", e);
                                             }
                                         }
-                                        
-                                        if let Err(e) = self.db.delete_user_roles(guild_id, member.user.id.get()) {
+
+                                        if let Err(e) = self
+                                            .db
+                                            .delete_user_roles(guild_id, member.user.id.get())
+                                        {
                                             eprintln!("Failed to delete user roles: {}", e);
                                         }
                                     }
                                     Err(e) => {
-                                        eprintln!("Failed to restore roles for {}: {}", member.user.tag(), e);
+                                        eprintln!(
+                                            "Failed to restore roles for {}: {}",
+                                            member.user.tag(),
+                                            e
+                                        );
                                     }
                                 }
                             }
@@ -205,50 +287,71 @@ impl EventHandler for Handler {
                     Err(e) => {
                         eprintln!("[{}] Advanced role filtering failed: {}, falling back to basic filtering", guild_id, e);
                         // Fallback to basic filtering if permission check fails
-                        match self.db.filter_roles_for_restoration(guild_id, &saved_roles) {
-                            Ok(filtered_roles) => {
-                                if !filtered_roles.is_empty() {
-                                    let roles_to_give: Vec<RoleId> = filtered_roles.iter().map(|&id| RoleId::new(id)).collect();
+                        if let Ok(filtered_roles) =
+                            self.db.filter_roles_for_restoration(guild_id, &saved_roles)
+                        {
+                            if !filtered_roles.is_empty() {
+                                let roles_to_give: Vec<RoleId> =
+                                    filtered_roles.iter().map(|&id| RoleId::new(id)).collect();
 
-                                    if !roles_to_give.is_empty() {
-                                        match member.add_roles(&ctx.http, &roles_to_give).await {
-                                            Ok(_) => {
-                                                // Log the restoration if a log channel is configured
-                                                if let Ok(Some(log_channel_id)) = self.db.get_log_channel(guild_id) {
-                                                    let role_mentions: Vec<String> = roles_to_give.iter()
-                                                        .map(|r| format!("<@&{}>", r.get()))
-                                                        .collect();
-                                                    let roles_text = role_mentions.join(", ");
-                                                    
-                                                    let author = CreateEmbedAuthor::new(&member.user.name)
-                                                        .icon_url(member.user.avatar_url().unwrap_or_else(|| member.user.default_avatar_url()));
-                                                    
-                                                    let embed = CreateEmbed::new()
-                                                        .author(author)
-                                                        .title("Roles Restored")
-                                                        .description(roles_text)
-                                                        .colour(0x2ecc71);
-                                                    
-                                                    if let Err(e) = ChannelId::new(log_channel_id)
-                                                        .send_message(&ctx.http, CreateMessage::new().embed(embed))
-                                                        .await
-                                                    {
-                                                        eprintln!("Failed to send log message: {}", e);
-                                                    }
-                                                }
-                                                
-                                                if let Err(e) = self.db.delete_user_roles(guild_id, member.user.id.get()) {
-                                                    eprintln!("Failed to delete user roles: {}", e);
+                                if !roles_to_give.is_empty() {
+                                    match member.add_roles(&ctx.http, &roles_to_give).await {
+                                        Ok(_) => {
+                                            // Log the restoration if a log channel is configured
+                                            if let Ok(Some(log_channel_id)) =
+                                                self.db.get_log_channel(guild_id)
+                                            {
+                                                let role_mentions: Vec<String> = roles_to_give
+                                                    .iter()
+                                                    .map(|r| format!("<@&{}>", r.get()))
+                                                    .collect();
+                                                let roles_text = role_mentions.join(", ");
+
+                                                let author =
+                                                    CreateEmbedAuthor::new(&member.user.name)
+                                                        .icon_url(
+                                                            member
+                                                                .user
+                                                                .avatar_url()
+                                                                .unwrap_or_else(|| {
+                                                                    member.user.default_avatar_url()
+                                                                }),
+                                                        );
+
+                                                let embed = CreateEmbed::new()
+                                                    .author(author)
+                                                    .title("Roles Restored")
+                                                    .description(roles_text)
+                                                    .colour(0x2ecc71);
+
+                                                if let Err(e) = ChannelId::new(log_channel_id)
+                                                    .send_message(
+                                                        &ctx.http,
+                                                        CreateMessage::new().embed(embed),
+                                                    )
+                                                    .await
+                                                {
+                                                    eprintln!("Failed to send log message: {}", e);
                                                 }
                                             }
-                                            Err(e) => {
-                                                eprintln!("Failed to restore roles for {}: {}", member.user.tag(), e);
+
+                                            if let Err(e) = self
+                                                .db
+                                                .delete_user_roles(guild_id, member.user.id.get())
+                                            {
+                                                eprintln!("Failed to delete user roles: {}", e);
                                             }
+                                        }
+                                        Err(e) => {
+                                            eprintln!(
+                                                "Failed to restore roles for {}: {}",
+                                                member.user.tag(),
+                                                e
+                                            );
                                         }
                                     }
                                 }
                             }
-                            Err(_) => {}
                         }
                     }
                 }
@@ -257,7 +360,10 @@ impl EventHandler for Handler {
                 eprintln!("[{}] No saved roles found for {}", guild_id, user_tag);
             }
             Err(e) => {
-                eprintln!("[{}] Failed to retrieve saved roles for {}: {}", guild_id, user_tag, e);
+                eprintln!(
+                    "[{}] Failed to retrieve saved roles for {}: {}",
+                    guild_id, user_tag, e
+                );
             }
         }
     }
@@ -286,7 +392,7 @@ async fn main() {
         .await
         .expect("Error creating client");
 
-    if let Err(_) = client.start().await {
+    if client.start().await.is_err() {
         // Silently handle error
     }
 }
