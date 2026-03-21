@@ -1,0 +1,133 @@
+# Rust build artifacts
+/target/
+Cargo.lock
+**/*.rs.bk
+*.pdb
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+.vim/
+
+# IDE cache directories
+.cargo/
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Python builds (if using build scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+discord_roles.db
+
+# Environment variables and secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.pub
+
+# OS specific files
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+!.gitkeep
+
+# Node modules (if frontend is added later)
+node_modules/
+npm-debug.log
+yarn.lock
+
+# macOS
+.AppleDouble
+.LSOverride
+*.bundle
+
+# Windows
+[Dd]esktop.ini
+ehthumbs.db
+Thumbs.db
+
+# JetBrains
+.idea/
+*.iml
+*.iws
+*.ipr
+*.sublime-project
+*.sublime-workspace
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# Vim
+.vim/
+.vimrc
+.gvimrc
+
+# Development
+.venv/
+venv/
+env/
+ENV/
+
+# Any local test outputs
+test_output/
+results/
+
+# Compiled binaries
+*.exe
+*.dll
+*.so
+*.dylib
