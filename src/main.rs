@@ -431,8 +431,10 @@ async fn main() {
     eprintln!("[DEBUG] Building Discord client with intents...");
     std::io::stderr().flush().ok();
 
-    // Build the client with timeout
-    let mut client = match tokio::time::timeout(tokio::time::Duration::from_secs(30), async {
+    // Build the client with increased timeout (Render might have slower network)
+    let mut client = match tokio::time::timeout(tokio::time::Duration::from_secs(120), async {
+        eprintln!("[DEBUG] Initiating Client::builder...");
+        std::io::stderr().flush().ok();
         Client::builder(&token, intents)
             .event_handler(handler)
             .await
@@ -451,11 +453,12 @@ async fn main() {
             std::process::exit(1);
         }
         Err(_) => {
-            eprintln!("❌ Discord client creation timed out (30s)");
+            eprintln!("❌ Discord client creation timed out (120s)");
             eprintln!("This usually means:");
             eprintln!("  1. Token is invalid or expired");
             eprintln!("  2. Network timeout connecting to Discord API");
             eprintln!("  3. Discord is temporarily unreachable");
+            eprintln!("  4. Render firewall blocking Discord API access");
             std::io::stderr().flush().ok();
             std::process::exit(1);
         }
@@ -464,23 +467,15 @@ async fn main() {
     println!("✅ Attempting to connect to Discord Gateway...");
     std::io::stdout().flush().ok();
 
-    // Start the bot with timeout
-    match tokio::time::timeout(tokio::time::Duration::from_secs(60), client.start()).await {
-        Ok(Ok(_)) => {
-            println!("✅ Discord bot connected and running");
-            std::io::stdout().flush().ok();
-        }
-        Ok(Err(e)) => {
-            eprintln!("❌ Discord bot connection failed: {}", e);
-            eprintln!("Error details: {:?}", e);
-            std::io::stderr().flush().ok();
-            std::process::exit(1);
-        }
-        Err(_) => {
-            eprintln!("❌ Discord bot connection timeout (60s)");
-            eprintln!("Bot failed to connect to Discord within timeout period");
-            std::io::stderr().flush().ok();
-            std::process::exit(1);
-        }
+    // Start the bot - this runs indefinitely, no timeout needed
+    if let Err(e) = client.start().await {
+        eprintln!("❌ Discord bot connection failed: {}", e);
+        eprintln!("Error details: {:?}", e);
+        std::io::stderr().flush().ok();
+        std::process::exit(1);
     }
+
+    // This line should never be reached as client.start() runs forever
+    println!("✅ Discord bot connected and running");
+    std::io::stdout().flush().ok();
 }
