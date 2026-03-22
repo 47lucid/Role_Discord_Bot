@@ -19,10 +19,6 @@ impl ServerState {
         self.last_ping
             .store(chrono::Utc::now().timestamp() as u64, Ordering::SeqCst);
     }
-
-    pub fn get_last_ping(&self) -> u64 {
-        self.last_ping.load(Ordering::SeqCst)
-    }
 }
 
 async fn health_check(State(state): State<ServerState>) -> impl IntoResponse {
