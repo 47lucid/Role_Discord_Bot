@@ -1,6 +1,7 @@
 // src/main.rs
 mod commands;
 mod db;
+mod http_server;
 
 use async_trait::async_trait;
 use db::Database;
@@ -392,6 +393,14 @@ async fn main() {
         .await
         .expect("Error creating client");
 
+    // Start HTTP health check server in background for Render keep-alive
+    let http_state = http_server::ServerState::new();
+    let http_state_clone = http_state.clone();
+    tokio::spawn(async move {
+        http_server::start_http_server(http_state_clone).await;
+    });
+
+    println!("Bot is starting...");
     if client.start().await.is_err() {
         // Silently handle error
     }
