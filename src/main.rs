@@ -22,7 +22,11 @@ struct Handler {
 #[async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, _ready: Ready) {
-        let _ = commands::register_commands(&ctx).await;
+        println!("✅ Bot is ready! Registering commands...");
+        match commands::register_commands(&ctx).await {
+            Ok(_) => println!("✅ Commands registered successfully"),
+            Err(e) => eprintln!("❌ Error registering commands: {}", e),
+        }
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
@@ -397,14 +401,23 @@ async fn main() {
     println!("🤖 Starting Discord bot...");
 
     let handler = Handler { db };
-    let intents = GatewayIntents::GUILD_MEMBERS | GatewayIntents::GUILDS;
+    let intents = GatewayIntents::GUILD_MEMBERS
+        | GatewayIntents::GUILDS
+        | GatewayIntents::GUILD_MESSAGE_REACTIONS;
 
     let mut client = Client::builder(&token, intents)
         .event_handler(handler)
         .await
         .expect("Error creating client");
 
-    if client.start().await.is_err() {
-        eprintln!("Discord bot disconnected");
+    println!("✅ Discord client created, attempting to connect...");
+    match client.start().await {
+        Ok(_) => {
+            println!("✅ Discord bot connected successfully");
+        }
+        Err(e) => {
+            eprintln!("❌ Discord bot connection error: {}", e);
+            std::process::exit(1);
+        }
     }
 }
