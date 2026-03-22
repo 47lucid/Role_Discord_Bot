@@ -377,11 +377,24 @@ impl EventHandler for Handler {
 
 #[tokio::main]
 async fn main() {
+    // Set up panic handler to log panics
+    std::panic::set_hook(Box::new(|panic_info| {
+        eprintln!("❌ PANIC: {:?}", panic_info);
+        std::io::stderr().flush().ok();
+    }));
+
+    // Set up unbuffered output for Docker logging
+    std::env::set_var("RUST_BACKTRACE", "1");
+
     // Load .env file if it exists
     let _ = dotenv::dotenv();
 
-    // Ensure output is flushed immediately
+    // Flush output immediately
     std::io::stdout().flush().ok();
+    std::io::stderr().flush().ok();
+
+    eprintln!("[STARTUP] Discord Role Restore Bot initializing...");
+    std::io::stderr().flush().ok();
 
     let token = env::var("DISCORD_TOKEN").expect("Please set DISCORD_TOKEN environment variable");
 

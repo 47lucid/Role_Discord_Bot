@@ -32,7 +32,13 @@ RUN adduser -D -u 1000 bot && \
 
 USER bot
 
+# Environment variables for logging
+ENV RUST_LOG=debug
+ENV RUST_BACKTRACE=1
+ENV RUST_ENVLOGGER_PADDING=0
+
 LABEL maintainer="Discord Role Restore Bot"
 LABEL description="Discord bot that automatically restores user roles when members rejoin"
 
+# Run with unbuffered output
 CMD ["./discord-role-restore"]
