@@ -377,10 +377,27 @@ impl EventHandler for Handler {
 
 #[tokio::main]
 async fn main() {
+    // Load .env file if it exists
+    let _ = dotenv::dotenv();
+    
     // Ensure output is flushed immediately
     std::io::stdout().flush().ok();
 
     let token = env::var("DISCORD_TOKEN").expect("Please set DISCORD_TOKEN environment variable");
+    
+    // Validate token format
+    if token.is_empty() || token.len() < 20 {
+        eprintln!("❌ Invalid DISCORD_TOKEN format. Token is empty or too short.");
+        eprintln!("   Expected: Bot token should be at least 20 characters");
+        eprintln!("   Make sure your .env file has: DISCORD_TOKEN=your_actual_token");
+        std::io::stderr().flush().ok();
+        std::process::exit(1);
+    }
+    
+    eprintln!("[DEBUG] Token loaded successfully (length: {}, starts with: {}...)", 
+        token.len(), 
+        &token[..std::cmp::min(10, token.len())]);
+    std::io::stderr().flush().ok();
 
     // Initialize database
     let db_path = env::var("DB_PATH").unwrap_or_else(|_| "discord_roles.db".to_string());
@@ -431,26 +448,14 @@ async fn main() {
     println!("✅ Attempting to connect to Discord Gateway...");
     std::io::stdout().flush().ok();
 
-    // Add timeout to detect hanging connections
-    match tokio::time::timeout(tokio::time::Duration::from_secs(30), client.start()).await {
-        Ok(Ok(_)) => {
-            println!("✅ Discord bot connected successfully");
-            std::io::stdout().flush().ok();
-        }
-        Ok(Err(e)) => {
-            eprintln!("❌ Discord bot connection failed: {}", e);
-            eprintln!("Error details: {:?}", e);
-            std::io::stderr().flush().ok();
-            std::process::exit(1);
-        }
-        Err(_) => {
-            eprintln!("❌ Discord connection timeout (30s) - bot is hanging");
-            eprintln!("This usually means:");
-            eprintln!("  1. Invalid/wrong DISCORD_TOKEN in Render");
-            eprintln!("  2. Network connectivity issue to Discord");
-            eprintln!("  3. Discord API is unreachable");
-            std::io::stderr().flush().ok();
-            std::process::exit(1);
-        }
+    // Start the bot - this will run indefinitely handling Discord events
+    if let Err(e) = client.start().await {
+        eprintln!("❌ Discord bot connection failed: {}", e);
+        eprintln!("Error details: {:?}", e);
+        std::io::stderr().flush().ok();
+        std::process::exit(1);
     }
+    
+    println!("✅ Discord bot connected and running");
+    std::io::stdout().flush().ok();
 }

@@ -1,0 +1,2 @@
+[DEBUG] Token loaded successfully (length: 72, starts with: MTMzNTI1Mz...)
+❌ Failed to bind HTTP server to port 8080: Only one usage of each socket address (protocol/network address/port) is normally permitted. (os error 10048)

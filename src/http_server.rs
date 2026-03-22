@@ -1,5 +1,6 @@
 use axum::{extract::State, response::IntoResponse, routing::get, Json, Router};
 use serde_json::json;
+use std::env;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -39,14 +40,17 @@ async fn ready(State(state): State<ServerState>) -> impl IntoResponse {
 }
 
 pub async fn start_http_server(state: ServerState) {
+    let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+    let bind_addr = format!("0.0.0.0:{}", port);
+    
     let app = Router::new()
         .route("/health", get(health_check))
         .route("/ready", get(ready))
         .with_state(state);
 
-    let listener = match tokio::net::TcpListener::bind("0.0.0.0:8080").await {
+    let listener = match tokio::net::TcpListener::bind(&bind_addr).await {
         Ok(listener) => {
-            println!("✅ HTTP server listening on 0.0.0.0:8080");
+            println!("✅ HTTP server listening on {}", bind_addr);
             listener
         }
         Err(e) => {
