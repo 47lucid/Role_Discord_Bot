@@ -42,7 +42,7 @@ async fn ready(State(state): State<ServerState>) -> impl IntoResponse {
 pub async fn start_http_server(state: ServerState) {
     let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
     let bind_addr = format!("0.0.0.0:{}", port);
-    
+
     let app = Router::new()
         .route("/health", get(health_check))
         .route("/ready", get(ready))

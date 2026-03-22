@@ -379,12 +379,12 @@ impl EventHandler for Handler {
 async fn main() {
     // Load .env file if it exists
     let _ = dotenv::dotenv();
-    
+
     // Ensure output is flushed immediately
     std::io::stdout().flush().ok();
 
     let token = env::var("DISCORD_TOKEN").expect("Please set DISCORD_TOKEN environment variable");
-    
+
     // Validate token format
     if token.is_empty() || token.len() < 20 {
         eprintln!("❌ Invalid DISCORD_TOKEN format. Token is empty or too short.");
@@ -393,10 +393,12 @@ async fn main() {
         std::io::stderr().flush().ok();
         std::process::exit(1);
     }
-    
-    eprintln!("[DEBUG] Token loaded successfully (length: {}, starts with: {}...)", 
-        token.len(), 
-        &token[..std::cmp::min(10, token.len())]);
+
+    eprintln!(
+        "[DEBUG] Token loaded successfully (length: {}, starts with: {}...)",
+        token.len(),
+        &token[..std::cmp::min(10, token.len())]
+    );
     std::io::stderr().flush().ok();
 
     // Initialize database
@@ -455,7 +457,7 @@ async fn main() {
         std::io::stderr().flush().ok();
         std::process::exit(1);
     }
-    
+
     println!("✅ Discord bot connected and running");
     std::io::stdout().flush().ok();
 }
