@@ -384,8 +384,19 @@ async fn main() {
         }
     };
 
-    let handler = Handler { db };
+    // Start HTTP health check server first (Render needs to detect this port)
+    let http_state = http_server::ServerState::new();
+    let http_state_clone = http_state.clone();
+    tokio::spawn(async move {
+        http_server::start_http_server(http_state_clone).await;
+    });
 
+    // Give HTTP server a moment to bind
+    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+    println!("🤖 Starting Discord bot...");
+
+    let handler = Handler { db };
     let intents = GatewayIntents::GUILD_MEMBERS | GatewayIntents::GUILDS;
 
     let mut client = Client::builder(&token, intents)
@@ -393,15 +404,7 @@ async fn main() {
         .await
         .expect("Error creating client");
 
-    // Start HTTP health check server in background for Render keep-alive
-    let http_state = http_server::ServerState::new();
-    let http_state_clone = http_state.clone();
-    tokio::spawn(async move {
-        http_server::start_http_server(http_state_clone).await;
-    });
-
-    println!("Bot is starting...");
     if client.start().await.is_err() {
-        // Silently handle error
+        eprintln!("Discord bot disconnected");
     }
 }

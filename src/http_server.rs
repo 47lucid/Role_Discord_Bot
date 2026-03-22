@@ -48,12 +48,19 @@ pub async fn start_http_server(state: ServerState) {
         .route("/ready", get(ready))
         .with_state(state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080")
-        .await
-        .expect("Failed to bind to 0.0.0.0:8080");
+    let listener = match tokio::net::TcpListener::bind("0.0.0.0:8080").await {
+        Ok(listener) => {
+            println!("✅ HTTP server listening on 0.0.0.0:8080");
+            listener
+        }
+        Err(e) => {
+            eprintln!("❌ Failed to bind HTTP server to port 8080: {}", e);
+            std::process::exit(1);
+        }
+    };
 
-    println!("HTTP server listening on port 8080");
-    axum::serve(listener, app)
-        .await
-        .expect("Failed to start HTTP server");
+    if let Err(e) = axum::serve(listener, app).await {
+        eprintln!("❌ HTTP server error: {}", e);
+        std::process::exit(1);
+    }
 }
