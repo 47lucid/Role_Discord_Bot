@@ -407,9 +407,7 @@ async fn main() {
     std::io::stdout().flush().ok();
 
     let handler = Handler { db };
-    let intents = GatewayIntents::GUILD_MEMBERS
-        | GatewayIntents::GUILDS
-        | GatewayIntents::GUILD_MESSAGE_REACTIONS;
+    let intents = GatewayIntents::GUILDS | GatewayIntents::GUILD_MEMBERS;
 
     eprintln!("[DEBUG] Building Discord client with intents...");
     std::io::stderr().flush().ok();
@@ -433,14 +431,27 @@ async fn main() {
     println!("✅ Attempting to connect to Discord Gateway...");
     std::io::stdout().flush().ok();
 
-    match client.start().await {
-        Ok(_) => {
+    // Add timeout to detect hanging connections
+    match tokio::time::timeout(
+        tokio::time::Duration::from_secs(30),
+        client.start()
+    ).await {
+        Ok(Ok(_)) => {
             println!("✅ Discord bot connected successfully");
             std::io::stdout().flush().ok();
         }
-        Err(e) => {
+        Ok(Err(e)) => {
             eprintln!("❌ Discord bot connection failed: {}", e);
-            eprintln!("Error type: {}", e);
+            eprintln!("Error details: {:?}", e);
+            std::io::stderr().flush().ok();
+            std::process::exit(1);
+        }
+        Err(_) => {
+            eprintln!("❌ Discord connection timeout (30s) - bot is hanging");
+            eprintln!("This usually means:");
+            eprintln!("  1. Invalid/wrong DISCORD_TOKEN in Render");
+            eprintln!("  2. Network connectivity issue to Discord");
+            eprintln!("  3. Discord API is unreachable");
             std::io::stderr().flush().ok();
             std::process::exit(1);
         }
