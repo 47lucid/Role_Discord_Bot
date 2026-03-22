@@ -444,13 +444,39 @@ async fn main() {
     eprintln!("[DEBUG] Building Discord client with intents...");
     std::io::stderr().flush().ok();
 
+    // Test DNS resolution to Discord API first
+    eprintln!("[DEBUG] Testing DNS resolution to discord.com...");
+    std::io::stderr().flush().ok();
+    match tokio::net::lookup_host("discord.com:443").await {
+        Ok(mut addrs) => {
+            if let Some(addr) = addrs.next() {
+                eprintln!("[DEBUG] ✅ DNS resolved: discord.com → {}", addr);
+            }
+        }
+        Err(e) => {
+            eprintln!("[DEBUG] ⚠️  DNS resolution failed: {}", e);
+            eprintln!("[DEBUG] This might indicate network connectivity issues on Render");
+        }
+    }
+    std::io::stderr().flush().ok();
+
     // Build the client with increased timeout (Render might have slower network)
+    eprintln!("[DEBUG] Building serenity Client (this may take up to 120s)...");
+    std::io::stderr().flush().ok();
     let mut client = match tokio::time::timeout(tokio::time::Duration::from_secs(120), async {
         eprintln!("[DEBUG] Initiating Client::builder...");
         std::io::stderr().flush().ok();
-        Client::builder(&token, intents)
+        let start = std::time::Instant::now();
+        let result = Client::builder(&token, intents)
             .event_handler(handler)
-            .await
+            .await;
+        let elapsed = start.elapsed();
+        eprintln!(
+            "[DEBUG] Client::builder completed in {:.2}s",
+            elapsed.as_secs_f64()
+        );
+        std::io::stderr().flush().ok();
+        result
     })
     .await
     {
