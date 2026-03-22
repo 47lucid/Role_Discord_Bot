@@ -432,10 +432,7 @@ async fn main() {
     std::io::stdout().flush().ok();
 
     // Add timeout to detect hanging connections
-    match tokio::time::timeout(
-        tokio::time::Duration::from_secs(30),
-        client.start()
-    ).await {
+    match tokio::time::timeout(tokio::time::Duration::from_secs(30), client.start()).await {
         Ok(Ok(_)) => {
             println!("✅ Discord bot connected successfully");
             std::io::stdout().flush().ok();
