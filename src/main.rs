@@ -13,6 +13,7 @@ use serenity::{
     Client,
 };
 use std::env;
+use std::io::Write;
 use std::sync::Arc;
 
 struct Handler {
@@ -376,6 +377,9 @@ impl EventHandler for Handler {
 
 #[tokio::main]
 async fn main() {
+    // Ensure output is flushed immediately
+    std::io::stdout().flush().ok();
+
     let token = env::var("DISCORD_TOKEN").expect("Please set DISCORD_TOKEN environment variable");
 
     // Initialize database
@@ -383,7 +387,8 @@ async fn main() {
     let db = match Database::init(&db_path) {
         Ok(db) => Arc::new(db),
         Err(e) => {
-            eprintln!("Failed to initialize database: {}", e);
+            eprintln!("❌ Failed to initialize database: {}", e);
+            std::io::stderr().flush().ok();
             std::process::exit(1);
         }
     };
@@ -399,24 +404,44 @@ async fn main() {
     tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 
     println!("🤖 Starting Discord bot...");
+    std::io::stdout().flush().ok();
 
     let handler = Handler { db };
     let intents = GatewayIntents::GUILD_MEMBERS
         | GatewayIntents::GUILDS
         | GatewayIntents::GUILD_MESSAGE_REACTIONS;
 
-    let mut client = Client::builder(&token, intents)
+    eprintln!("[DEBUG] Building Discord client with intents...");
+    std::io::stderr().flush().ok();
+
+    let mut client = match Client::builder(&token, intents)
         .event_handler(handler)
         .await
-        .expect("Error creating client");
+    {
+        Ok(client) => {
+            println!("✅ Discord client created successfully!");
+            std::io::stdout().flush().ok();
+            client
+        }
+        Err(e) => {
+            eprintln!("❌ Failed to create Discord client: {}", e);
+            std::io::stderr().flush().ok();
+            std::process::exit(1);
+        }
+    };
 
-    println!("✅ Discord client created, attempting to connect...");
+    println!("✅ Attempting to connect to Discord Gateway...");
+    std::io::stdout().flush().ok();
+
     match client.start().await {
         Ok(_) => {
             println!("✅ Discord bot connected successfully");
+            std::io::stdout().flush().ok();
         }
         Err(e) => {
-            eprintln!("❌ Discord bot connection error: {}", e);
+            eprintln!("❌ Discord bot connection failed: {}", e);
+            eprintln!("Error type: {}", e);
+            std::io::stderr().flush().ok();
             std::process::exit(1);
         }
     }
