@@ -469,16 +469,22 @@ async fn main() {
 
     eprintln!("[DEBUG] Initiating Client::builder...");
     std::io::stderr().flush().ok();
+
+    // Setup a 30s timeout for the client builder/connection
+    let client_builder = Client::builder(&token, intents)
+        .event_handler(handler);
+
+    eprintln!("[DEBUG] Awaiting Client::builder.build()...");
+    std::io::stderr().flush().ok();
+    
     let start = std::time::Instant::now();
-
-    let client_result = Client::builder(&token, intents)
-        .event_handler(handler)
-        .await;
-
+    let client_result = client_builder.await;
     let elapsed = start.elapsed();
+
     eprintln!(
-        "[DEBUG] Client::builder completed in {:.2}s",
-        elapsed.as_secs_f64()
+        "[DEBUG] Client::builder completed in {:.2}s. Result: {}",
+        elapsed.as_secs_f64(),
+        if client_result.is_ok() { "SUCCESS" } else { "FAIL" }
     );
     std::io::stderr().flush().ok();
 
