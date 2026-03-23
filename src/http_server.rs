@@ -44,6 +44,7 @@ pub async fn start_http_server(state: ServerState) {
     let bind_addr = format!("0.0.0.0:{}", port);
 
     let app = Router::new()
+        .route("/", get(health_check))
         .route("/health", get(health_check))
         .route("/ready", get(ready))
         .with_state(state);
