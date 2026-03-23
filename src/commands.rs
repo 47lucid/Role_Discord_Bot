@@ -1,8 +1,8 @@
 use crate::db::Database;
 use serenity::all::{
     ButtonStyle, ChannelType, CommandInteraction, ComponentInteraction, Context, CreateButton,
-    CreateCommand, CreateEmbed,
-    CreateSelectMenu, CreateSelectMenuOption, EditInteractionResponse, EditMessage, Permissions,
+    CreateCommand, CreateEmbed, CreateSelectMenu, CreateSelectMenuOption, EditInteractionResponse,
+    EditMessage, Permissions,
 };
 use std::sync::Arc;
 use tokio::time::{sleep, Duration};
