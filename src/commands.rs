@@ -311,6 +311,7 @@ pub async fn handle_admin_filter_toggle(
     db: Arc<Database>,
 ) -> serenity::Result<()> {
     // Defer immediately to prevent 3-second interaction timeout
+    interaction.defer(ctx).await?;
 
     let guild_id = match interaction.guild_id {
         Some(id) => id,
@@ -544,6 +545,7 @@ pub async fn handle_safe_roles_select(
     db: Arc<Database>,
 ) -> serenity::Result<()> {
     // Defer immediately to prevent 3-second interaction timeout
+    interaction.defer(ctx).await?;
 
     let guild_id = match interaction.guild_id {
         Some(id) => id,
@@ -796,6 +798,9 @@ pub async fn handle_avoid_roles_select(
     interaction: &ComponentInteraction,
     db: Arc<Database>,
 ) -> serenity::Result<()> {
+    // Defer immediately to prevent 3-second interaction timeout
+    interaction.defer(ctx).await?;
+
     let guild_id = match interaction.guild_id {
         Some(id) => id,
         None => {
@@ -1047,6 +1052,9 @@ pub async fn handle_log_channel_select(
     interaction: &ComponentInteraction,
     db: Arc<Database>,
 ) -> serenity::Result<()> {
+    // Defer immediately to prevent 3-second interaction timeout
+    interaction.defer(ctx).await?;
+
     let guild_id = match interaction.guild_id {
         Some(id) => id,
         None => {
