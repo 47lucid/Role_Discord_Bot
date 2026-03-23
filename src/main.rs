@@ -396,7 +396,10 @@ async fn main() {
     eprintln!("[STARTUP] Discord Role Restore Bot initializing...");
     std::io::stderr().flush().ok();
 
-    let token = env::var("DISCORD_TOKEN").expect("Please set DISCORD_TOKEN environment variable");
+    let token = env::var("DISCORD_TOKEN")
+        .expect("Please set DISCORD_TOKEN environment variable")
+        .trim()
+        .to_string();
 
     // Validate token format
     if token.is_empty() || token.len() < 20 {
