@@ -1,5 +1,5 @@
 # Stage 1: Compute recipe (dependency lock file)
-FROM lukemathwalker/cargo-chef:latest-rust-1-alpine AS chef
+FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
 WORKDIR /app
 
 FROM chef AS planner
@@ -16,18 +16,19 @@ RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
 RUN cargo build --release --bin discord-role-restore
 
-# Stage 4: Tiny Alpine runtime
-FROM alpine:latest AS runtime
+# Stage 4: Debian runtime
+FROM debian:bookworm-slim AS runtime
 WORKDIR /app
 
 # Discord bots need these for SSL/TLS connections
-RUN apk add --no-cache ca-certificates libgcc
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Copy the binary from builder
 COPY --from=builder /app/target/release/discord-role-restore .
 
 # Create a non-root user for security
-RUN adduser -D -u 1000 bot && \
+RUN useradd -m -u 1000 bot && \
+    mkdir -p /app && \
     chown -R bot:bot /app
 
 USER bot

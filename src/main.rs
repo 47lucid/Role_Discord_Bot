@@ -375,7 +375,7 @@ impl EventHandler for Handler {
     }
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() {
     // Set up panic handler to log panics
     std::panic::set_hook(Box::new(|panic_info| {
