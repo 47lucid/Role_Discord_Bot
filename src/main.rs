@@ -478,22 +478,30 @@ async fn main() {
 
     let start = std::time::Instant::now();
     // Use tokio::time::timeout to prevent infinite hang and see the actual error
-    let client_result =
-        match tokio::time::timeout(tokio::time::Duration::from_secs(30), client_builder).await {
-            Ok(res) => res,
-            Err(_) => {
-                eprintln!("❌ ERROR: Discord connection timed out after 30 seconds!");
-                eprintln!("   This usually means the bot token is invalid, or the 'Server Members Intent' is NOT enabled in the Discord Developer Portal.");
-                std::io::stderr().flush().ok();
-                std::process::exit(1);
-            }
-        };
+    let client_result = match tokio::time::timeout(
+        tokio::time::Duration::from_secs(30),
+        client_builder,
+    )
+    .await
+    {
+        Ok(res) => res,
+        Err(_) => {
+            eprintln!("❌ ERROR: Discord connection timed out after 30 seconds!");
+            eprintln!("   This usually means the bot token is invalid, or the 'Server Members Intent' is NOT enabled in the Discord Developer Portal.");
+            std::io::stderr().flush().ok();
+            std::process::exit(1);
+        }
+    };
 
     let elapsed = start.elapsed();
     eprintln!(
         "[DEBUG] Client::builder completed in {:.2}s. Result: {}",
         elapsed.as_secs_f64(),
-        if client_result.is_ok() { "SUCCESS" } else { "FAIL" }
+        if client_result.is_ok() {
+            "SUCCESS"
+        } else {
+            "FAIL"
+        }
     );
     std::io::stderr().flush().ok();
 
