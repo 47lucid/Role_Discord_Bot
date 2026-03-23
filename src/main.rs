@@ -464,43 +464,33 @@ async fn main() {
     std::io::stderr().flush().ok();
 
     // Build the client with increased timeout (Render might have slower network)
-    eprintln!("[DEBUG] Building serenity Client (this may take up to 120s)...");
+    eprintln!("[DEBUG] Building serenity Client...");
     std::io::stderr().flush().ok();
-    let mut client = match tokio::time::timeout(tokio::time::Duration::from_secs(120), async {
-        eprintln!("[DEBUG] Initiating Client::builder...");
-        std::io::stderr().flush().ok();
-        let start = std::time::Instant::now();
-        let result = Client::builder(&token, intents)
-            .event_handler(handler)
-            .await;
-        let elapsed = start.elapsed();
-        eprintln!(
-            "[DEBUG] Client::builder completed in {:.2}s",
-            elapsed.as_secs_f64()
-        );
-        std::io::stderr().flush().ok();
-        result
-    })
-    .await
-    {
-        Ok(Ok(client)) => {
+    
+    eprintln!("[DEBUG] Initiating Client::builder...");
+    std::io::stderr().flush().ok();
+    let start = std::time::Instant::now();
+    
+    let client_result = Client::builder(&token, intents)
+        .event_handler(handler)
+        .await;
+        
+    let elapsed = start.elapsed();
+    eprintln!(
+        "[DEBUG] Client::builder completed in {:.2}s",
+        elapsed.as_secs_f64()
+    );
+    std::io::stderr().flush().ok();
+
+    let mut client = match client_result {
+        Ok(client) => {
             println!("✅ Discord client created successfully!");
             std::io::stdout().flush().ok();
             client
         }
-        Ok(Err(e)) => {
+        Err(e) => {
             eprintln!("❌ Failed to create Discord client: {}", e);
             eprintln!("Details: {:?}", e);
-            std::io::stderr().flush().ok();
-            std::process::exit(1);
-        }
-        Err(_) => {
-            eprintln!("❌ Discord client creation timed out (120s)");
-            eprintln!("This usually means:");
-            eprintln!("  1. Token is invalid or expired");
-            eprintln!("  2. Network timeout connecting to Discord API");
-            eprintln!("  3. Discord is temporarily unreachable");
-            eprintln!("  4. Render firewall blocking Discord API access");
             std::io::stderr().flush().ok();
             std::process::exit(1);
         }

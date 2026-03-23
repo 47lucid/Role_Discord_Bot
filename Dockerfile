@@ -9,11 +9,13 @@ RUN cargo chef prepare --recipe-path recipe.json
 # Stage 2: Build dependencies (cached layer - this takes longest!)
 FROM chef AS builder 
 WORKDIR /app
+RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
 COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 
 # Stage 3: Build the actual application
 COPY . .
+RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
 RUN cargo build --release --bin discord-role-restore
 
 # Stage 4: Debian runtime
@@ -21,7 +23,7 @@ FROM debian:bookworm-slim AS runtime
 WORKDIR /app
 
 # Discord bots need these for SSL/TLS connections
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y ca-certificates openssl libssl3 && rm -rf /var/lib/apt/lists/*
 
 # Copy the binary from builder
 COPY --from=builder /app/target/release/discord-role-restore .
