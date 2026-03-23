@@ -104,6 +104,9 @@ pub async fn handle_setup_command(
     command: &CommandInteraction,
     db: Arc<Database>,
 ) -> serenity::Result<()> {
+    // Acknowledge the interaction immediately to prevent the 3s timeout
+    command.defer(ctx).await?;
+
     let guild_id = match command.guild_id {
         Some(id) => id,
         None => {
@@ -113,12 +116,7 @@ pub async fn handle_setup_command(
                 .colour(0xe74c3c); // Red
 
             command
-                .create_response(
-                    ctx,
-                    CreateInteractionResponse::Message(
-                        CreateInteractionResponseMessage::new().embed(embed),
-                    ),
-                )
+                .edit_response(ctx, EditInteractionResponse::new().embed(embed))
                 .await?;
             return Ok(());
         }
@@ -141,14 +139,7 @@ pub async fn handle_setup_command(
             .colour(0xe74c3c);
 
         command
-            .create_response(
-                ctx,
-                CreateInteractionResponse::Message(
-                    CreateInteractionResponseMessage::new()
-                        .embed(embed)
-                        .ephemeral(true),
-                ),
-            )
+            .edit_response(ctx, EditInteractionResponse::new().embed(embed))
             .await?;
         return Ok(());
     }
@@ -178,12 +169,7 @@ pub async fn handle_setup_command(
             .colour(0xe74c3c); // Red
 
         command
-            .create_response(
-                ctx,
-                CreateInteractionResponse::Message(
-                    CreateInteractionResponseMessage::new().embed(embed),
-                ),
-            )
+            .edit_response(ctx, EditInteractionResponse::new().embed(embed))
             .await?;
         return Ok(());
     }
@@ -303,13 +289,11 @@ pub async fn handle_setup_command(
     embed = embed.colour(0x8660e2); // Gold/Amber
 
     command
-        .create_response(
+        .edit_response(
             ctx,
-            CreateInteractionResponse::Message(
-                CreateInteractionResponseMessage::new()
-                    .embed(embed)
-                    .components(vec![safe_row, avoid_row, log_row, button_row]),
-            ),
+            EditInteractionResponse::new()
+                .embed(embed)
+                .components(vec![safe_row, avoid_row, log_row, button_row]),
         )
         .await?;
 
@@ -326,6 +310,8 @@ pub async fn handle_admin_filter_toggle(
     interaction: &ComponentInteraction,
     db: Arc<Database>,
 ) -> serenity::Result<()> {
+    // Defer immediately to prevent 3-second interaction timeout
+
     let guild_id = match interaction.guild_id {
         Some(id) => id,
         None => {
@@ -335,14 +321,7 @@ pub async fn handle_admin_filter_toggle(
                 .colour(0xe74c3c);
 
             interaction
-                .create_response(
-                    ctx,
-                    CreateInteractionResponse::Message(
-                        CreateInteractionResponseMessage::new()
-                            .embed(embed)
-                            .ephemeral(true),
-                    ),
-                )
+                .edit_response(ctx, EditInteractionResponse::new().embed(embed))
                 .await?;
             return Ok(());
         }
@@ -360,14 +339,7 @@ pub async fn handle_admin_filter_toggle(
                     .colour(0xe74c3c);
 
                 interaction
-                    .create_response(
-                        ctx,
-                        CreateInteractionResponse::Message(
-                            CreateInteractionResponseMessage::new()
-                                .embed(embed)
-                                .ephemeral(true),
-                        ),
-                    )
+                    .edit_response(ctx, EditInteractionResponse::new().embed(embed))
                     .await?;
                 return Ok(());
             }
@@ -386,9 +358,6 @@ pub async fn handle_admin_filter_toggle(
     // Save the toggled filter status
     match db.set_filter_admin_roles(guild_id.get(), new_filter) {
         Ok(_) => {
-            // Defer the interaction to allow time for response
-            interaction.defer(ctx).await?;
-
             // Fetch guild for role information
             let guild = guild_id.to_partial_guild(&ctx.http).await.ok();
 
@@ -561,14 +530,7 @@ pub async fn handle_admin_filter_toggle(
                 .colour(0xe74c3c);
 
             interaction
-                .create_response(
-                    ctx,
-                    CreateInteractionResponse::Message(
-                        CreateInteractionResponseMessage::new()
-                            .embed(embed)
-                            .ephemeral(true),
-                    ),
-                )
+                .edit_response(ctx, EditInteractionResponse::new().embed(embed))
                 .await?;
         }
     }
@@ -581,6 +543,8 @@ pub async fn handle_safe_roles_select(
     interaction: &ComponentInteraction,
     db: Arc<Database>,
 ) -> serenity::Result<()> {
+    // Defer immediately to prevent 3-second interaction timeout
+
     let guild_id = match interaction.guild_id {
         Some(id) => id,
         None => {
@@ -590,14 +554,7 @@ pub async fn handle_safe_roles_select(
                 .colour(0xe74c3c);
 
             interaction
-                .create_response(
-                    ctx,
-                    CreateInteractionResponse::Message(
-                        CreateInteractionResponseMessage::new()
-                            .embed(embed)
-                            .ephemeral(true),
-                    ),
-                )
+                .edit_response(ctx, EditInteractionResponse::new().embed(embed))
                 .await?;
             return Ok(());
         }
@@ -615,14 +572,7 @@ pub async fn handle_safe_roles_select(
                     .colour(0xe74c3c);
 
                 interaction
-                    .create_response(
-                        ctx,
-                        CreateInteractionResponse::Message(
-                            CreateInteractionResponseMessage::new()
-                                .embed(embed)
-                                .ephemeral(true),
-                        ),
-                    )
+                    .edit_response(ctx, EditInteractionResponse::new().embed(embed))
                     .await?;
                 return Ok(());
             }
@@ -814,7 +764,6 @@ pub async fn handle_safe_roles_select(
             let button_row = serenity::all::CreateActionRow::Buttons(vec![admin_filter_button]);
 
             // Edit the original message with updated embed and components
-            interaction.defer(ctx).await?;
             interaction
                 .edit_response(
                     ctx,
@@ -834,14 +783,7 @@ pub async fn handle_safe_roles_select(
                 .colour(0xe74c3c);
 
             interaction
-                .create_response(
-                    ctx,
-                    CreateInteractionResponse::Message(
-                        CreateInteractionResponseMessage::new()
-                            .embed(embed)
-                            .ephemeral(true),
-                    ),
-                )
+                .edit_response(ctx, EditInteractionResponse::new().embed(embed))
                 .await?;
         }
     }
@@ -863,14 +805,7 @@ pub async fn handle_avoid_roles_select(
                 .colour(0xe74c3c);
 
             interaction
-                .create_response(
-                    ctx,
-                    CreateInteractionResponse::Message(
-                        CreateInteractionResponseMessage::new()
-                            .embed(embed)
-                            .ephemeral(true),
-                    ),
-                )
+                .edit_response(ctx, EditInteractionResponse::new().embed(embed))
                 .await?;
             return Ok(());
         }
@@ -888,14 +823,7 @@ pub async fn handle_avoid_roles_select(
                     .colour(0xe74c3c);
 
                 interaction
-                    .create_response(
-                        ctx,
-                        CreateInteractionResponse::Message(
-                            CreateInteractionResponseMessage::new()
-                                .embed(embed)
-                                .ephemeral(true),
-                        ),
-                    )
+                    .edit_response(ctx, EditInteractionResponse::new().embed(embed))
                     .await?;
                 return Ok(());
             }
@@ -1087,7 +1015,6 @@ pub async fn handle_avoid_roles_select(
             let button_row = serenity::all::CreateActionRow::Buttons(vec![admin_filter_button]);
 
             // Edit the original message with updated embed and components
-            interaction.defer(ctx).await?;
             interaction
                 .edit_response(
                     ctx,
@@ -1107,14 +1034,7 @@ pub async fn handle_avoid_roles_select(
                 .colour(0xe74c3c);
 
             interaction
-                .create_response(
-                    ctx,
-                    CreateInteractionResponse::Message(
-                        CreateInteractionResponseMessage::new()
-                            .embed(embed)
-                            .ephemeral(true),
-                    ),
-                )
+                .edit_response(ctx, EditInteractionResponse::new().embed(embed))
                 .await?;
         }
     }
@@ -1136,14 +1056,7 @@ pub async fn handle_log_channel_select(
                 .colour(0xe74c3c);
 
             interaction
-                .create_response(
-                    ctx,
-                    CreateInteractionResponse::Message(
-                        CreateInteractionResponseMessage::new()
-                            .embed(embed)
-                            .ephemeral(true),
-                    ),
-                )
+                .edit_response(ctx, EditInteractionResponse::new().embed(embed))
                 .await?;
             return Ok(());
         }
@@ -1161,14 +1074,7 @@ pub async fn handle_log_channel_select(
                     .colour(0xe74c3c);
 
                 interaction
-                    .create_response(
-                        ctx,
-                        CreateInteractionResponse::Message(
-                            CreateInteractionResponseMessage::new()
-                                .embed(embed)
-                                .ephemeral(true),
-                        ),
-                    )
+                    .edit_response(ctx, EditInteractionResponse::new().embed(embed))
                     .await?;
                 return Ok(());
             }
@@ -1357,7 +1263,6 @@ pub async fn handle_log_channel_select(
             let button_row = serenity::all::CreateActionRow::Buttons(vec![admin_filter_button]);
 
             // Edit the original message with updated embed and components
-            interaction.defer(ctx).await?;
             interaction
                 .edit_response(
                     ctx,
@@ -1377,14 +1282,7 @@ pub async fn handle_log_channel_select(
                 .colour(0xe74c3c);
 
             interaction
-                .create_response(
-                    ctx,
-                    CreateInteractionResponse::Message(
-                        CreateInteractionResponseMessage::new()
-                            .embed(embed)
-                            .ephemeral(true),
-                    ),
-                )
+                .edit_response(ctx, EditInteractionResponse::new().embed(embed))
                 .await?;
         }
     }

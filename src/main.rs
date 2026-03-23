@@ -466,15 +466,15 @@ async fn main() {
     // Build the client with increased timeout (Render might have slower network)
     eprintln!("[DEBUG] Building serenity Client...");
     std::io::stderr().flush().ok();
-    
+
     eprintln!("[DEBUG] Initiating Client::builder...");
     std::io::stderr().flush().ok();
     let start = std::time::Instant::now();
-    
+
     let client_result = Client::builder(&token, intents)
         .event_handler(handler)
         .await;
-        
+
     let elapsed = start.elapsed();
     eprintln!(
         "[DEBUG] Client::builder completed in {:.2}s",
